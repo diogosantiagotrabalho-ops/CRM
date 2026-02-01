@@ -1,0 +1,412 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  MANAGER
+  SALES
+  VIEWER
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  LOST
+}
+
+enum OpportunityStage {
+  PROSPECT
+  DISCOVERY
+  PROPOSAL
+  NEGOTIATION
+  WON
+  LOST
+}
+
+enum ActivityType {
+  TASK
+  CALL
+  MEETING
+}
+
+enum ActivityStatus {
+  OPEN
+  DONE
+}
+
+enum NotificationType {
+  ACTIVITY_OVERDUE
+  OPPORTUNITY_WON
+  OPPORTUNITY_LOST
+}
+
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+
+  users         User[]
+  leads         Lead[]
+  accounts      Account[]
+  contacts      Contact[]
+  opportunities Opportunity[]
+  activities    Activity[]
+  notes         Note[]
+  files         File[]
+  emailLogs     EmailLog[]
+  tags          Tag[]
+  notifications Notification[]
+
+  @@index([name])
+}
+
+model User {
+  id             String   @id @default(cuid())
+  name           String?
+  email          String   @unique
+  emailVerified  DateTime?
+  passwordHash   String?
+  role           Role     @default(SALES)
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  deletedAt      DateTime?
+
+  accounts        Account[]      @relation("AccountOwner")
+  leads           Lead[]         @relation("LeadOwner")
+  opportunities   Opportunity[]  @relation("OpportunityOwner")
+  activities      Activity[]     @relation("ActivityOwner")
+  notes           Note[]         @relation("NoteOwner")
+  files           File[]         @relation("FileOwner")
+  emailLogs       EmailLog[]     @relation("EmailLogOwner")
+  notifications   Notification[] @relation("NotificationUser")
+
+  createdLeads    Lead[]         @relation("LeadCreatedBy")
+  updatedLeads    Lead[]         @relation("LeadUpdatedBy")
+  createdAccounts Account[]      @relation("AccountCreatedBy")
+  updatedAccounts Account[]      @relation("AccountUpdatedBy")
+  createdContacts Contact[]      @relation("ContactCreatedBy")
+  updatedContacts Contact[]      @relation("ContactUpdatedBy")
+  createdOpps     Opportunity[]  @relation("OpportunityCreatedBy")
+  updatedOpps     Opportunity[]  @relation("OpportunityUpdatedBy")
+  createdActivities Activity[]   @relation("ActivityCreatedBy")
+  updatedActivities Activity[]   @relation("ActivityUpdatedBy")
+  createdNotes    Note[]         @relation("NoteCreatedBy")
+  updatedNotes    Note[]         @relation("NoteUpdatedBy")
+  createdFiles    File[]         @relation("FileCreatedBy")
+  updatedFiles    File[]         @relation("FileUpdatedBy")
+  createdEmailLogs EmailLog[]    @relation("EmailLogCreatedBy")
+  updatedEmailLogs EmailLog[]    @relation("EmailLogUpdatedBy")
+
+  @@index([organizationId])
+  @@index([role])
+}
+
+model Lead {
+  id             String     @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  name           String
+  email          String
+  phone          String
+  source         String?
+  status         LeadStatus @default(NEW)
+  score          Int        @default(0)
+  ownerId        String?
+  owner          User?      @relation("LeadOwner", fields: [ownerId], references: [id])
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+  deletedAt      DateTime?
+  createdById    String?
+  createdBy      User?      @relation("LeadCreatedBy", fields: [createdById], references: [id])
+  updatedById    String?
+  updatedBy      User?      @relation("LeadUpdatedBy", fields: [updatedById], references: [id])
+
+  tags       LeadTag[]
+  activities Activity[]
+  notes      Note[]
+  files      File[]
+  emailLogs  EmailLog[]
+
+  @@index([organizationId])
+  @@index([ownerId])
+  @@index([status])
+}
+
+model Account {
+  id             String   @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  legalName      String
+  cnpj           String
+  segment        String?
+  size           String?
+  address        String?
+  ownerId        String?
+  owner          User?    @relation("AccountOwner", fields: [ownerId], references: [id])
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  deletedAt      DateTime?
+  createdById    String?
+  createdBy      User?    @relation("AccountCreatedBy", fields: [createdById], references: [id])
+  updatedById    String?
+  updatedBy      User?    @relation("AccountUpdatedBy", fields: [updatedById], references: [id])
+
+  contacts      Contact[]
+  opportunities Opportunity[]
+  tags          AccountTag[]
+  notes         Note[]
+  files         File[]
+  emailLogs     EmailLog[]
+
+  @@unique([organizationId, cnpj])
+  @@index([organizationId])
+  @@index([ownerId])
+}
+
+model Contact {
+  id             String   @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  name           String
+  email          String
+  phone          String
+  role           String?
+  accountId      String?
+  account        Account? @relation(fields: [accountId], references: [id])
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  deletedAt      DateTime?
+  createdById    String?
+  createdBy      User?    @relation("ContactCreatedBy", fields: [createdById], references: [id])
+  updatedById    String?
+  updatedBy      User?    @relation("ContactUpdatedBy", fields: [updatedById], references: [id])
+
+  activities Activity[]
+  notes      Note[]
+  files      File[]
+  emailLogs  EmailLog[]
+
+  @@index([organizationId])
+  @@index([accountId])
+}
+
+model Opportunity {
+  id             String           @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  name           String
+  accountId      String?
+  account        Account?         @relation(fields: [accountId], references: [id])
+  stage          OpportunityStage @default(PROSPECT)
+  value          Float            @default(0)
+  probability    Int              @default(0)
+  closeDate      DateTime?
+  ownerId        String?
+  owner          User?            @relation("OpportunityOwner", fields: [ownerId], references: [id])
+  source         String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  deletedAt      DateTime?
+  createdById    String?
+  createdBy      User?            @relation("OpportunityCreatedBy", fields: [createdById], references: [id])
+  updatedById    String?
+  updatedBy      User?            @relation("OpportunityUpdatedBy", fields: [updatedById], references: [id])
+
+  tags       OpportunityTag[]
+  activities Activity[]
+  notes      Note[]
+  files      File[]
+  emailLogs  EmailLog[]
+
+  @@index([organizationId])
+  @@index([ownerId])
+  @@index([stage])
+}
+
+model Activity {
+  id             String        @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  type           ActivityType
+  dueDate        DateTime
+  status         ActivityStatus @default(OPEN)
+  description    String
+  leadId         String?
+  lead           Lead?         @relation(fields: [leadId], references: [id])
+  contactId      String?
+  contact        Contact?      @relation(fields: [contactId], references: [id])
+  opportunityId  String?
+  opportunity    Opportunity?  @relation(fields: [opportunityId], references: [id])
+  ownerId        String?
+  owner          User?         @relation("ActivityOwner", fields: [ownerId], references: [id])
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  deletedAt      DateTime?
+  createdById    String?
+  createdBy      User?         @relation("ActivityCreatedBy", fields: [createdById], references: [id])
+  updatedById    String?
+  updatedBy      User?         @relation("ActivityUpdatedBy", fields: [updatedById], references: [id])
+
+  notes     Note[]
+  files     File[]
+  emailLogs EmailLog[]
+
+  @@index([organizationId])
+  @@index([ownerId])
+  @@index([status])
+}
+
+model Note {
+  id             String   @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  body           String
+  leadId         String?
+  lead           Lead?    @relation(fields: [leadId], references: [id])
+  accountId      String?
+  account        Account? @relation(fields: [accountId], references: [id])
+  contactId      String?
+  contact        Contact? @relation(fields: [contactId], references: [id])
+  opportunityId  String?
+  opportunity    Opportunity? @relation(fields: [opportunityId], references: [id])
+  activityId     String?
+  activity       Activity? @relation(fields: [activityId], references: [id])
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  deletedAt      DateTime?
+  createdById    String?
+  createdBy      User?    @relation("NoteCreatedBy", fields: [createdById], references: [id])
+  updatedById    String?
+  updatedBy      User?    @relation("NoteUpdatedBy", fields: [updatedById], references: [id])
+
+  @@index([organizationId])
+}
+
+model File {
+  id             String   @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  filename       String
+  url            String
+  mimeType       String
+  size           Int
+  leadId         String?
+  lead           Lead?    @relation(fields: [leadId], references: [id])
+  accountId      String?
+  account        Account? @relation(fields: [accountId], references: [id])
+  contactId      String?
+  contact        Contact? @relation(fields: [contactId], references: [id])
+  opportunityId  String?
+  opportunity    Opportunity? @relation(fields: [opportunityId], references: [id])
+  activityId     String?
+  activity       Activity? @relation(fields: [activityId], references: [id])
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  deletedAt      DateTime?
+  createdById    String?
+  createdBy      User?    @relation("FileCreatedBy", fields: [createdById], references: [id])
+  updatedById    String?
+  updatedBy      User?    @relation("FileUpdatedBy", fields: [updatedById], references: [id])
+
+  @@index([organizationId])
+}
+
+model EmailLog {
+  id             String   @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  subject        String
+  sender         String
+  recipients     String
+  body           String
+  leadId         String?
+  lead           Lead?    @relation(fields: [leadId], references: [id])
+  accountId      String?
+  account        Account? @relation(fields: [accountId], references: [id])
+  contactId      String?
+  contact        Contact? @relation(fields: [contactId], references: [id])
+  opportunityId  String?
+  opportunity    Opportunity? @relation(fields: [opportunityId], references: [id])
+  activityId     String?
+  activity       Activity? @relation(fields: [activityId], references: [id])
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  deletedAt      DateTime?
+  createdById    String?
+  createdBy      User?    @relation("EmailLogCreatedBy", fields: [createdById], references: [id])
+  updatedById    String?
+  updatedBy      User?    @relation("EmailLogUpdatedBy", fields: [updatedById], references: [id])
+
+  @@index([organizationId])
+}
+
+model Tag {
+  id             String   @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  name           String
+  color          String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  leadTags        LeadTag[]
+  accountTags     AccountTag[]
+  opportunityTags OpportunityTag[]
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
+}
+
+model LeadTag {
+  leadId String
+  tagId  String
+  lead   Lead @relation(fields: [leadId], references: [id])
+  tag    Tag  @relation(fields: [tagId], references: [id])
+
+  @@id([leadId, tagId])
+}
+
+model AccountTag {
+  accountId String
+  tagId     String
+  account   Account @relation(fields: [accountId], references: [id])
+  tag       Tag     @relation(fields: [tagId], references: [id])
+
+  @@id([accountId, tagId])
+}
+
+model OpportunityTag {
+  opportunityId String
+  tagId         String
+  opportunity   Opportunity @relation(fields: [opportunityId], references: [id])
+  tag           Tag         @relation(fields: [tagId], references: [id])
+
+  @@id([opportunityId, tagId])
+}
+
+model Notification {
+  id             String           @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  userId         String
+  user           User         @relation("NotificationUser", fields: [userId], references: [id])
+  type           NotificationType
+  title          String
+  body           String
+  readAt         DateTime?
+  createdAt      DateTime @default(now())
+
+  @@index([organizationId])
+  @@index([userId])
+}
