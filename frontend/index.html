@@ -1,18 +1,67 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-br">
 <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>CRM Simples</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <h1>CRM</h1>
+  <main class="app">
+    <header class="app__header">
+      <div>
+        <p class="app__eyebrow">Painel de Vendas</p>
+        <h1>CRM Simples</h1>
+        <p class="app__subtitle">Acompanhe seus leads e mantenha o funil organizado.</p>
+      </div>
+      <div class="app__stats">
+        <div class="stat">
+          <span class="stat__label">Total de Leads</span>
+          <strong class="stat__value" id="totalLeads">0</strong>
+        </div>
+        <div class="stat">
+          <span class="stat__label">Novos</span>
+          <strong class="stat__value" id="novosLeads">0</strong>
+        </div>
+      </div>
+    </header>
 
-  <input id="nome" placeholder="Nome">
-  <input id="email" placeholder="Email">
-  <input id="telefone" placeholder="Telefone">
-  <button onclick="addLead()">Adicionar</button>
+    <section class="card">
+      <h2>Novo lead</h2>
+      <form class="lead-form" id="leadForm">
+        <label>
+          Nome
+          <input id="nome" name="nome" placeholder="Ex.: Maria Souza" required>
+        </label>
+        <label>
+          Email
+          <input id="email" name="email" placeholder="maria@empresa.com" type="email" required>
+        </label>
+        <label>
+          Telefone
+          <input id="telefone" name="telefone" placeholder="(11) 99999-9999" required>
+        </label>
+        <label>
+          Status
+          <select id="status">
+            <option value="Novo">Novo</option>
+            <option value="Contato feito">Contato feito</option>
+            <option value="Proposta enviada">Proposta enviada</option>
+            <option value="Fechado">Fechado</option>
+          </select>
+        </label>
+        <button type="submit">Adicionar lead</button>
+      </form>
+    </section>
 
-  <ul id="lista"></ul>
+    <section class="card">
+      <div class="card__header">
+        <h2>Leads cadastrados</h2>
+        <button class="ghost" id="refresh">Atualizar</button>
+      </div>
+      <ul id="lista" class="lead-list"></ul>
+    </section>
+  </main>
 
   <script src="script.js"></script>
 </body>
